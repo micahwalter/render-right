@@ -3,13 +3,12 @@
 import { useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
-import type { DynamicToolUIPart } from 'ai';
 import RouteCard, { type RouteAnalysis } from '@/components/RouteCard';
 
 const EXAMPLES = [
-  { url: 'https://github.com/vercel/next-learn', label: 'next-learn' },
-  { url: 'https://github.com/leerob/leerob.io', label: 'leerob.io' },
-  { url: 'https://github.com/shadcn-ui/ui', label: 'shadcn/ui' },
+  { url: 'https://github.com/nextjs/saas-starter', label: 'saas-starter' },
+  { url: 'https://github.com/vercel/next-app-router-playground', label: 'app-router-playground' },
+  { url: 'https://github.com/timlrx/tailwind-nextjs-starter-blog', label: 'tailwind-blog' },
 ];
 
 export default function Home() {
@@ -22,24 +21,24 @@ export default function Home() {
 
   const isLoading = status === 'submitted' || status === 'streaming';
 
-  // Extract route analyses from dynamic tool parts in assistant messages
+  // Static tools come through as 'tool-{name}' parts (not 'dynamic-tool').
+  // The analysis data lives in `input` (the args Claude sent to the tool).
   const analyses: RouteAnalysis[] = messages
     .flatMap(m => m.parts)
     .filter(
-      (p): p is DynamicToolUIPart & { state: 'output-available'; output: RouteAnalysis } =>
-        p.type === 'dynamic-tool' &&
-        (p as DynamicToolUIPart).toolName === 'report_route_analysis' &&
-        (p as DynamicToolUIPart).state === 'output-available',
+      p => p.type === 'tool-report_route_analysis' && (p as Record<string, unknown>).state === 'output-available',
     )
-    .map(p => p.output);
+    .map(p => (p as Record<string, unknown>).input as RouteAnalysis);
 
-  // Latest assistant text for the status indicator
-  const statusText =
-    messages
-      .at(-1)
-      ?.parts.filter(p => p.type === 'text')
-      .map(p => (p as { type: 'text'; text: string }).text)
-      .join('') ?? '';
+  // Current assistant text: used as status while streaming, summary when done
+  const assistantText = messages
+    .at(-1)
+    ?.parts.filter(p => p.type === 'text')
+    .map(p => (p as { type: 'text'; text: string }).text)
+    .join('') ?? '';
+
+  // Only show text as status while still loading; once complete it becomes the summary
+  const statusText = isLoading ? assistantText : '';
 
   const handleAnalyze = (url = repoUrl) => {
     const trimmed = url.trim();
@@ -139,13 +138,15 @@ export default function Home() {
           <div>
             {/* Status pulse */}
             {isLoading && (
-              <div className="flex items-center gap-3 mb-6 text-white/40 text-sm">
+              <div className="flex items-start gap-3 mb-6 text-white/40 text-sm">
                 <span
-                  className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse"
+                  className="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 animate-pulse"
                   style={{ backgroundColor: '#0070f3' }}
                 />
-                <span className="truncate">
-                  {statusText ? statusText.slice(-120).trim() : 'Fetching repository…'}
+                <span className="leading-relaxed">
+                  {statusText
+                    ? statusText.replace(/\n+/g, ' ').trim().slice(-200)
+                    : 'Fetching repository…'}
                 </span>
               </div>
             )}
@@ -177,6 +178,13 @@ export default function Home() {
                 {analyses.map((a, i) => (
                   <RouteCard key={i} analysis={a} />
                 ))}
+              </div>
+            )}
+
+            {/* Final summary from Claude — shown after all cards are rendered */}
+            {isComplete && assistantText && (
+              <div className="mt-6 pt-6 border-t border-white/8 text-white/50 text-xs leading-relaxed whitespace-pre-wrap font-mono">
+                {assistantText}
               </div>
             )}
 
