@@ -1,0 +1,71 @@
+{
+  "description": "Lightweight evaluation rubric for render-right route classification accuracy",
+  "version": "1.0",
+  "scoring": "1 point per correct recommendedStrategy. Partial credit: PPR vs ISR edge cases expected to vary.",
+  "cases": [
+    {
+      "id": "static-marketing",
+      "description": "Pure marketing landing page with no data fetching",
+      "code": "export default function Page() {\n  return (\n    <main>\n      <h1>Welcome to Acme</h1>\n      <p>The best product on the market.</p>\n    </main>\n  );\n}",
+      "expectedStrategy": "SSG",
+      "expectedPriority": "low",
+      "notes": "No dynamic data — CDN forever is correct, zero function cost"
+    },
+    {
+      "id": "blog-post-isr",
+      "description": "Blog post page fetching from a CMS with explicit revalidation",
+      "code": "export default async function Page({ params }) {\n  const post = await fetch(\n    `https://cms.example.com/posts/${params.slug}`,\n    { next: { revalidate: 3600 } }\n  ).then(r => r.json());\n  return <article>{post.body}</article>;\n}",
+      "expectedStrategy": "ISR",
+      "expectedPriority": "low",
+      "notes": "Already using ISR correctly — should be marked optimal"
+    },
+    {
+      "id": "dashboard-with-cookies",
+      "description": "User dashboard that reads an auth cookie",
+      "code": "import { cookies } from 'next/headers';\n\nexport default async function Page() {\n  const session = (await cookies()).get('session');\n  const data = await fetch('/api/user', { cache: 'no-store' }).then(r => r.json());\n  return <Dashboard user={data} />;\n}",
+      "expectedStrategy": "SSR",
+      "expectedPriority": "medium",
+      "notes": "cookies() makes this unavoidably dynamic — SSR is correct"
+    },
+    {
+      "id": "product-page-no-cache",
+      "description": "Product detail page fetching from DB with no caching specified",
+      "code": "export default async function Page({ params }) {\n  const product = await fetch(`/api/products/${params.id}`).then(r => r.json());\n  return <ProductPage product={product} />;\n}",
+      "expectedStrategy": "ISR",
+      "expectedPriority": "high",
+      "notes": "No cache directive in Next.js 15 means no-store (SSR on every request) — should add revalidate"
+    },
+    {
+      "id": "search-results-searchparams",
+      "description": "Search results page driven by query parameters",
+      "code": "export default async function Page({ searchParams }) {\n  const q = (await searchParams).q;\n  const results = await fetch(`/api/search?q=${q}`).then(r => r.json());\n  return <SearchResults items={results} />;\n}",
+      "expectedStrategy": "SSR",
+      "expectedPriority": "medium",
+      "notes": "searchParams access forces SSR in Next.js 15 — correct but Edge could reduce latency"
+    },
+    {
+      "id": "ppr-candidate",
+      "description": "Product page with static info and a Suspense-wrapped recommendations widget",
+      "code": "import { Suspense } from 'react';\n\nexport default async function Page({ params }) {\n  const product = await fetch(`/products/${params.id}`, {\n    next: { revalidate: 3600 }\n  }).then(r => r.json());\n\n  return (\n    <div>\n      <ProductInfo product={product} />\n      <Suspense fallback={<Spinner />}>\n        <Recommendations productId={params.id} />\n      </Suspense>\n    </div>\n  );\n}",
+      "expectedStrategy": "PPR",
+      "expectedPriority": "high",
+      "notes": "Classic PPR candidate: static shell + dynamic island in Suspense"
+    },
+    {
+      "id": "edge-geo",
+      "description": "Geo-personalized page already using edge runtime",
+      "code": "export const runtime = 'edge';\nimport { geolocation } from '@vercel/functions';\n\nexport default async function Page(request) {\n  const { country } = geolocation(request);\n  return <LocalizedContent country={country} />;\n}",
+      "expectedStrategy": "Edge",
+      "expectedPriority": "low",
+      "notes": "Already correctly using Edge for geo-personalization — should be marked optimal"
+    },
+    {
+      "id": "force-dynamic-on-static",
+      "description": "Static about page incorrectly forced to SSR with force-dynamic",
+      "code": "export const dynamic = 'force-dynamic';\n\nexport default function Page() {\n  return (\n    <div>\n      <h1>About Us</h1>\n      <p>We are a team of engineers passionate about the web.</p>\n    </div>\n  );\n}",
+      "expectedStrategy": "SSG",
+      "expectedPriority": "high",
+      "notes": "force-dynamic on static content is a costly mistake — every visit hits a function"
+    }
+  ]
+}
