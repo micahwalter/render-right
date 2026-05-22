@@ -158,7 +158,7 @@ export default function Home() {
                   {highPriority.length > 1 ? 's' : ''} found
                 </span>
                 <span className="text-white/30 text-xs">
-                  Addressing these could significantly reduce your Vercel spend and
+                  Addressing these could significantly reduce your compute costs and
                   improve Core Web Vitals.
                 </span>
               </div>
@@ -191,7 +191,7 @@ export default function Home() {
 
       <footer className="border-t border-white/5 px-6 py-4 shrink-0">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <span className="text-xs text-white/20">Built with Vercel AI SDK</span>
+          <span className="text-xs text-white/20">Built with AI SDK</span>
           <span className="text-xs text-white/20">Next.js 16 · GPT-4o · Multi-step agent</span>
         </div>
       </footer>
