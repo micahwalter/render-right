@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { listRoutes, readFile } from '@/lib/github';
 import { SYSTEM_PROMPT } from '@/lib/prompts';
 
+export const maxDuration = 60;
+
 // Use createAnthropic with explicit config so that shell env vars injected by
 // other tools (e.g. Claude Desktop sets ANTHROPIC_BASE_URL without /v1 and
 // an empty ANTHROPIC_API_KEY) don't override our project settings.

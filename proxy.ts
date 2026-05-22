@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const password = process.env.SITE_PASSWORD;
 
   // Skip auth if no password is configured (local dev without env var)
