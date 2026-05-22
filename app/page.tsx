@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import RouteCard, { type RouteAnalysis } from '@/components/RouteCard';
@@ -53,6 +53,11 @@ export default function Home() {
 
   const highPriority = analyses.filter(a => a.priority === 'high' && !a.isAlreadyOptimal);
   const isComplete = !isLoading && hasStarted && analyses.length > 0;
+
+  const logRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [assistantText]);
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
@@ -136,18 +141,22 @@ export default function Home() {
         {/* Results */}
         {hasStarted && (
           <div>
-            {/* Status pulse */}
+            {/* Agent log — scrollable, auto-scrolls to bottom as output streams */}
             {isLoading && (
-              <div className="flex items-start gap-3 mb-6 text-white/40 text-sm">
-                <span
-                  className="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 animate-pulse"
-                  style={{ backgroundColor: '#0070f3' }}
-                />
-                <span className="leading-relaxed">
-                  {statusText
-                    ? statusText.replace(/\n+/g, ' ').trim().slice(-200)
-                    : 'Fetching repository…'}
-                </span>
+              <div className="mb-6 rounded-lg border border-white/8 bg-white/[0.02] overflow-hidden">
+                <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5">
+                  <span
+                    className="w-1.5 h-1.5 rounded-full animate-pulse shrink-0"
+                    style={{ backgroundColor: '#0070f3' }}
+                  />
+                  <span className="text-xs text-white/30 font-mono">Agent working…</span>
+                </div>
+                <div
+                  ref={logRef}
+                  className="max-h-40 overflow-y-auto px-3 py-2 text-xs text-white/40 font-mono leading-relaxed whitespace-pre-wrap"
+                >
+                  {statusText || 'Fetching repository…'}
+                </div>
               </div>
             )}
 
