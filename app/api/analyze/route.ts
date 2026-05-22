@@ -1,15 +1,23 @@
 import { streamText, convertToModelMessages, tool, stepCountIs } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
 import { listRoutes, readFile } from '@/lib/github';
 import { SYSTEM_PROMPT } from '@/lib/prompts';
+
+// Use createAnthropic with explicit config so that shell env vars injected by
+// other tools (e.g. Claude Desktop sets ANTHROPIC_BASE_URL without /v1 and
+// an empty ANTHROPIC_API_KEY) don't override our project settings.
+const anthropic = createAnthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY_RENDER_RIGHT,
+  baseURL: 'https://api.anthropic.com/v1',
+});
 
 export async function POST(req: Request) {
   const { messages } = await req.json();
   const modelMessages = await convertToModelMessages(messages);
 
   const result = streamText({
-    model: openai('gpt-4o'),
+    model: anthropic('claude-sonnet-4-6'),
     system: SYSTEM_PROMPT,
     messages: modelMessages,
     stopWhen: stepCountIs(30),

@@ -61,6 +61,6 @@ Expected output: 7–8/8 exact match. PPR/ISR variance on mixed patterns is trea
 
 - Next.js 16 (App Router)
 - AI SDK v6 (`streamText`, `tool`, `useChat`, `DefaultChatTransport`)
-- GPT-4o
+- Claude Sonnet 4.6
 - Tailwind CSS v4
 - TypeScript

@@ -192,7 +192,7 @@ export default function Home() {
       <footer className="border-t border-white/5 px-6 py-4 shrink-0">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <span className="text-xs text-white/20">Built with AI SDK</span>
-          <span className="text-xs text-white/20">Next.js 16 · GPT-4o · Multi-step agent</span>
+          <span className="text-xs text-white/20">Next.js 16 · Claude Sonnet 4.6 · Multi-step agent</span>
         </div>
       </footer>
     </div>

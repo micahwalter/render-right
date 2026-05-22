@@ -8,7 +8,7 @@
  */
 
 import { generateText, tool, stepCountIs } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
@@ -39,11 +39,16 @@ const ACCEPTABLE_VARIANCE: Record<string, string[]> = {
   ISR: ['PPR'],
 };
 
+const anthropic = createAnthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY_RENDER_RIGHT,
+  baseURL: 'https://api.anthropic.com/v1',
+});
+
 async function evaluateCase(tc: TestCase): Promise<EvalResult> {
   let captured: Record<string, unknown> | null = null;
 
   await generateText({
-    model: openai('gpt-4o-mini'),
+    model: anthropic('claude-haiku-4-5-20251001'),
     system: SYSTEM_PROMPT,
     prompt: `Analyze this Next.js route and call report_route_analysis:\n\nFile: app/test/page.tsx\n\n${tc.code}`,
     stopWhen: stepCountIs(3),
