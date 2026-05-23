@@ -5,7 +5,7 @@ import { listRoutes, readFile } from '@/lib/github';
 import { SYSTEM_PROMPT } from '@/lib/prompts';
 
 export const runtime = 'edge';
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const gateway = createGateway({
   apiKey: process.env.AI_GATEWAY_API_KEY,
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       },
     },
     messages: modelMessages,
-    stopWhen: stepCountIs(30),
+    stopWhen: stepCountIs(100),
     tools: {
       list_routes: tool({
         description:
