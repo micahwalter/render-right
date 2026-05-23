@@ -14,6 +14,7 @@ const EXAMPLES = [
 export default function Home() {
   const [repoUrl, setRepoUrl] = useState('');
   const [hasStarted, setHasStarted] = useState(false);
+  const [shareStatus, setShareStatus] = useState<'idle' | 'loading' | 'copied' | 'error'>('idle');
 
   const { messages, sendMessage, status, error } = useChat({
     transport: new DefaultChatTransport({ api: '/api/analyze' }),
@@ -51,6 +52,25 @@ export default function Home() {
     window.location.reload();
   };
 
+  const handleShare = async () => {
+    if (shareStatus === 'loading') return;
+    setShareStatus('loading');
+    try {
+      const res = await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ analyses, repoUrl }),
+      });
+      const { id } = await res.json();
+      await navigator.clipboard.writeText(`${window.location.origin}/r/${id}`);
+      setShareStatus('copied');
+      setTimeout(() => setShareStatus('idle'), 2000);
+    } catch {
+      setShareStatus('error');
+      setTimeout(() => setShareStatus('idle'), 2000);
+    }
+  };
+
   const highPriority = analyses.filter(a => a.priority === 'high' && !a.isAlreadyOptimal);
   const isComplete = !isLoading && hasStarted && analyses.length > 0;
 
@@ -71,12 +91,29 @@ export default function Home() {
             </span>
           </div>
           {hasStarted && (
-            <button
-              onClick={handleReset}
-              className="text-xs text-white/40 hover:text-white/70 transition-colors cursor-pointer"
-            >
-              ← New analysis
-            </button>
+            <div className="flex items-center gap-4">
+              {isComplete && (
+                <button
+                  onClick={handleShare}
+                  disabled={shareStatus === 'loading'}
+                  className="text-xs text-white/40 hover:text-white/70 transition-colors cursor-pointer disabled:opacity-40"
+                >
+                  {shareStatus === 'loading'
+                    ? 'Saving…'
+                    : shareStatus === 'copied'
+                      ? 'Link copied!'
+                      : shareStatus === 'error'
+                        ? 'Failed'
+                        : 'Share report'}
+                </button>
+              )}
+              <button
+                onClick={handleReset}
+                className="text-xs text-white/40 hover:text-white/70 transition-colors cursor-pointer"
+              >
+                ← New analysis
+              </button>
+            </div>
           )}
         </div>
       </header>
