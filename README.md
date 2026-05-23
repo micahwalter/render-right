@@ -39,7 +39,7 @@ sequenceDiagram
     API->>GW: streamText — system prompt + 3 tools
     GW->>LLM: forward request (BYOK Anthropic key)
 
-    loop Multi-step agent (≤ 30 steps)
+    loop Multi-step agent (≤ 100 steps)
         LLM->>API: tool_call: list_routes
         API->>GH: GET /repos/:owner/:repo/git/trees
         Note over API,GH: cached 5 min (Next.js fetch cache)
@@ -60,7 +60,7 @@ sequenceDiagram
     API-->>Browser: stream: summary
 ```
 
-The agent runs entirely server-side: `streamText` with `stopWhen: stepCountIs(30)` handles the tool-call loop without any client round-trips between steps. `toUIMessageStreamResponse()` pipes the AI SDK v6 UI message stream directly to the browser, so route cards appear in real time.
+The agent runs entirely server-side: `streamText` with `stopWhen: stepCountIs(100)` handles the tool-call loop without any client round-trips between steps. `toUIMessageStreamResponse()` pipes the AI SDK v6 UI message stream directly to the browser, so route cards appear in real time.
 
 ---
 
@@ -131,6 +131,23 @@ Override which models are tested:
 AI_GATEWAY_API_KEY=... EVAL_MODELS=anthropic/claude-sonnet-4.6,google/gemini-2.5-pro npm run eval
 ```
 
+### CI integration
+
+A non-blocking GitHub Actions workflow (`.github/workflows/evals.yml`) runs the Haiku eval suite automatically on every PR that touches `lib/prompts.ts`, `evals/**`, or `app/api/analyze/route.ts`. It uses `continue-on-error: true` so prompt regressions surface as a visible signal without blocking merges.
+
+---
+
+## Sharing reports
+
+Once an analysis completes, a **Share report** button appears in the header. Clicking it:
+
+1. POSTs the full analysis JSON to `/api/reports`, which saves it to [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) with private access and returns a short ID.
+2. Copies a shareable URL (`/r/<id>`) to the clipboard.
+
+Recipients see the same route cards in a read-only layout at `/r/[id]` — no login required. The page fetches the blob server-side using `BLOB_READ_WRITE_TOKEN`, so the raw storage URL is never exposed to the browser.
+
+Requires `BLOB_READ_WRITE_TOKEN` to be set (see [environment variables](#environment-variables) below).
+
 ---
 
 ## Local development
@@ -150,6 +167,7 @@ Open [http://localhost:3000](http://localhost:3000).
 |---|---|---|
 | `AI_GATEWAY_API_KEY` | Yes | Vercel AI Gateway API key — get from the Vercel dashboard |
 | `GITHUB_TOKEN` | No | Raises GitHub rate limit from 60 → 5,000 req/hr for public repos |
+| `BLOB_READ_WRITE_TOKEN` | No | Vercel Blob token — enables the Share report feature (`/api/reports`, `/r/[id]`) |
 | `SITE_PASSWORD` | No | Enables HTTP Basic Auth on the deployed site (`proxy.ts`) |
 
 Configure your Anthropic key as BYOK in the Vercel dashboard under AI Gateway → Bring Your Own Key so requests use your existing Anthropic credits.
@@ -160,6 +178,7 @@ Configure your Anthropic key as BYOK in the Vercel dashboard under AI Gateway �
 
 - [x] [Edge Runtime on `/api/analyze`](https://github.com/micahwalter/render-right/issues/5) — uses `atob` + `TextDecoder` in `lib/github.ts` for Edge compatibility
 - [x] [Copy-to-clipboard on `implementationHint` code snippets](https://github.com/micahwalter/render-right/issues/6)
+- [x] Shareable report URLs — saves analysis to Vercel Blob; copies a `/r/<id>` link to clipboard
 - [ ] [Email / Slack report export](https://github.com/micahwalter/render-right/issues/7) — send the full analysis as a formatted digest
 - [ ] [Private repo support](https://github.com/micahwalter/render-right/issues/8) — OAuth flow to obtain a scoped GitHub token from the user
 - [ ] [Diff mode](https://github.com/micahwalter/render-right/issues/9) — re-analyze after making changes and highlight what improved
