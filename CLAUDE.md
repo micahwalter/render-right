@@ -88,6 +88,6 @@ Static tools defined with `tool()` produce message parts typed `'tool-{toolName}
 
 ---
 
-## Known architectural gap
+## Edge Runtime
 
-`app/api/analyze/route.ts` does not export `runtime = 'edge'`. The pitch mentions Edge Runtime, but `lib/github.ts` uses `Buffer.from(data.content, 'base64')` (Node.js-only API). To fix: replace with `atob(data.content)` + `TextDecoder` before adding the edge export.
+`app/api/analyze/route.ts` exports `runtime = 'edge'`. `lib/github.ts` decodes base64 content with `atob` + `TextDecoder` (not `Buffer`) to stay Edge-compatible.

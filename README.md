@@ -158,8 +158,8 @@ Configure your Anthropic key as BYOK in the Vercel dashboard under AI Gateway �
 
 ## Roadmap
 
-- [ ] [Edge Runtime on `/api/analyze`](https://github.com/micahwalter/render-right/issues/5) — requires swapping `Buffer.from` → `atob` + `TextDecoder` in `lib/github.ts`
-- [ ] [Copy-to-clipboard on `implementationHint` code snippets](https://github.com/micahwalter/render-right/issues/6)
+- [x] [Edge Runtime on `/api/analyze`](https://github.com/micahwalter/render-right/issues/5) — uses `atob` + `TextDecoder` in `lib/github.ts` for Edge compatibility
+- [x] [Copy-to-clipboard on `implementationHint` code snippets](https://github.com/micahwalter/render-right/issues/6)
 - [ ] [Email / Slack report export](https://github.com/micahwalter/render-right/issues/7) — send the full analysis as a formatted digest
 - [ ] [Private repo support](https://github.com/micahwalter/render-right/issues/8) — OAuth flow to obtain a scoped GitHub token from the user
 - [ ] [Diff mode](https://github.com/micahwalter/render-right/issues/9) — re-analyze after making changes and highlight what improved

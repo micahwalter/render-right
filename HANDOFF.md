@@ -14,8 +14,10 @@ The app is **live on Vercel** and working end-to-end.
 
 ### What works
 - Route analysis streams route cards progressively as the agent reads each file
-- Scrollable agent log shows full Claude output while it's working
-- Summary text from Claude is shown below cards after analysis completes
+- Scrollable agent log shows while streaming; hides when analysis completes
+- Summary banner (high-priority count or "all optimal") shown when complete
+- Copy-to-clipboard button on each `implementationHint` code snippet
+- Edge Runtime on `/api/analyze` — low cold-start latency via Vercel Edge Network
 - Three working example repos in the UI (saas-starter, app-router-playground, tailwind-blog)
 - HTTP Basic Auth proxy (`proxy.ts`) — active when `SITE_PASSWORD` env var is set
 - Eval suite (`npm run eval`) — 8 test cases, **8/8 pass rate** (exact match)
@@ -25,16 +27,13 @@ The app is **live on Vercel** and working end-to-end.
 
 | Variable | Notes |
 |---|---|
-| `ANTHROPIC_API_KEY_RENDER_RIGHT` | Anthropic API key — project-specific name avoids Claude Desktop conflicts |
+| `AI_GATEWAY_API_KEY` | Vercel AI Gateway key — get from Vercel dashboard → AI Gateway → API Keys |
 | `GITHUB_TOKEN` | Optional — raises GitHub rate limit from 60 to 5,000 req/hr |
 | `SITE_PASSWORD` | Password for HTTP Basic Auth; leave unset to skip auth |
 
 ---
 
 ## Critical technical details
-
-### Why `ANTHROPIC_API_KEY_RENDER_RIGHT` (not `ANTHROPIC_API_KEY`)
-Claude Desktop injects `ANTHROPIC_BASE_URL=https://api.anthropic.com` (missing `/v1`) and an empty `ANTHROPIC_API_KEY=` into the shell environment, which overrides `.env.local`. Using a project-specific var name + hardcoded `baseURL` in `createAnthropic()` avoids the conflict entirely. See `app/api/analyze/route.ts` and `evals/run.ts`.
 
 ### `maxDuration = 60` on the analyze route
 `app/api/analyze/route.ts` exports `maxDuration = 60`. Without this, Vercel cuts off the streaming response after 10s (the platform default). The AI agent can take 30–60s to read a full repo. Vercel Hobby supports up to 60s; Pro supports up to 300s.
@@ -58,14 +57,14 @@ Next.js 16 deprecated the `middleware` file convention in favour of `proxy`. The
 ### Why tool parts filter on `'tool-report_route_analysis'` (not `'dynamic-tool'`)
 Static tools defined with `tool()` produce message parts typed `'tool-{toolName}'`. The code originally filtered for `'dynamic-tool'` which never matched, so cards never appeared. Analysis data lives in `input` (args the model sent to the tool), not `output`. See `app/page.tsx` lines ~26–31.
 
-### Edge Runtime — not yet on the analyze route
-The original pitch mentioned Edge Runtime for lower cold-start latency. `app/api/analyze/route.ts` does **not** currently export `runtime = 'edge'`. Reason: `lib/github.ts` uses `Buffer.from(data.content, 'base64')` which is Node.js-only. To enable Edge Runtime, replace with `atob(data.content)` + `TextDecoder`. Noted as a future improvement.
+### Edge Runtime on the analyze route
+`app/api/analyze/route.ts` exports `runtime = 'edge'`. `lib/github.ts` decodes base64 content with `atob` + `TextDecoder` (not `Buffer`) — required for Edge compatibility. This was enabled in PR #14.
 
 ### Models available on this API key
 Only Claude 4.x — `claude-sonnet-4-6` (main app), `claude-haiku-4-5-20251001` (evals). Claude 3.x models return 404.
 
 ### Secret safety
-`ANTHROPIC_API_KEY_RENDER_RIGHT` and `GITHUB_TOKEN` are only read in server-side code (`app/api/analyze/route.ts`, `lib/github.ts`). Neither has a `NEXT_PUBLIC_` prefix, so Next.js never bundles them into the browser.
+`AI_GATEWAY_API_KEY` and `GITHUB_TOKEN` are only read in server-side code (`app/api/analyze/route.ts`, `lib/github.ts`). Neither has a `NEXT_PUBLIC_` prefix, so Next.js never bundles them into the browser.
 
 ---
 
@@ -89,11 +88,10 @@ Only Claude 4.x — `claude-sonnet-4-6` (main app), `claude-haiku-4-5-20251001` 
 ## Local development
 
 ```bash
-cd /Users/micah/Code/github.com/micahwalter/render-right
 npm run dev        # http://localhost:3000
 
 # Run evals (tsx doesn't auto-load .env.local — pass the key explicitly)
-ANTHROPIC_API_KEY_RENDER_RIGHT=$(grep ANTHROPIC_API_KEY_RENDER_RIGHT .env.local | cut -d= -f2) npm run eval
+AI_GATEWAY_API_KEY=$(grep AI_GATEWAY_API_KEY .env.local | cut -d= -f2) npm run eval
 ```
 
 ---
@@ -113,8 +111,10 @@ gh pr create --base main
 
 ## Possible next steps
 
-- Enable Edge Runtime on `/api/analyze` — swap `Buffer.from` → `atob` + `TextDecoder` in `lib/github.ts`
-- Add a copy-to-clipboard button on `implementationHint` code snippets
-- Consider streaming the agent log even after completion (currently hides when done)
 - Add more eval test cases to improve coverage of PPR vs ISR edge cases
+- Email / Slack report export — send the full analysis as a formatted digest
+- Private repo support — OAuth flow to obtain a scoped GitHub token from the user
+- Diff mode — re-analyze after making changes and highlight what improved
+- Configurable model in the UI — let users pick the analysis model at runtime via the gateway
+- Per-route cost estimate — attach dollar figures to recommendations based on expected traffic
 - Set a `SITE_PASSWORD` in Vercel env vars to lock down the deployed site
