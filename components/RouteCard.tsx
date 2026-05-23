@@ -1,3 +1,7 @@
+'use client';
+
+import { useState } from 'react';
+
 const STRATEGY = {
   SSG: {
     bg: 'bg-emerald-950',
@@ -49,6 +53,57 @@ export interface RouteAnalysis {
   performanceImpact: string;
   implementationHint: string;
   priority: 'high' | 'medium' | 'low';
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="shrink-0 text-white/20 hover:text-white/50 transition-colors cursor-pointer"
+      aria-label="Copy to clipboard"
+    >
+      {copied ? (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-emerald-400"
+        >
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      ) : (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="9" y="2" width="6" height="4" rx="1" />
+          <path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2" />
+        </svg>
+      )}
+    </button>
+  );
 }
 
 export default function RouteCard({ analysis }: { analysis: RouteAnalysis }) {
@@ -138,9 +193,12 @@ export default function RouteCard({ analysis }: { analysis: RouteAnalysis }) {
           )}
         </div>
         {!optimal && analysis.implementationHint && (
-          <code className="text-xs text-[#0070f3]/60 font-mono truncate max-w-xs">
-            {analysis.implementationHint}
-          </code>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <code className="text-xs text-[#0070f3]/60 font-mono truncate max-w-xs">
+              {analysis.implementationHint}
+            </code>
+            <CopyButton text={analysis.implementationHint} />
+          </div>
         )}
       </div>
     </div>
