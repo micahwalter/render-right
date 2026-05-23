@@ -73,7 +73,7 @@ async function evaluateCase(tc: TestCase): Promise<EvalResult> {
           routePath: z.string(),
           filePath: z.string(),
           currentStrategy: z.string(),
-          recommendedStrategy: z.string(),
+          recommendedStrategy: z.enum(['SSG', 'ISR', 'PPR', 'SSR', 'Edge', 'Client']),
           isAlreadyOptimal: z.boolean(),
           reasoning: z.string(),
           signals: z.array(z.string()),
