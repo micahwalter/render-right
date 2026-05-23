@@ -20,7 +20,13 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: anthropic('claude-sonnet-4-6'),
-    system: SYSTEM_PROMPT,
+    system: {
+      role: 'system',
+      content: SYSTEM_PROMPT,
+      providerOptions: {
+        anthropic: { cacheControl: { type: 'ephemeral' } },
+      },
+    },
     messages: modelMessages,
     stopWhen: stepCountIs(30),
     tools: {

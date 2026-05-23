@@ -49,7 +49,13 @@ async function evaluateCase(tc: TestCase): Promise<EvalResult> {
 
   await generateText({
     model: anthropic('claude-haiku-4-5-20251001'),
-    system: SYSTEM_PROMPT,
+    system: {
+      role: 'system',
+      content: SYSTEM_PROMPT,
+      providerOptions: {
+        anthropic: { cacheControl: { type: 'ephemeral' } },
+      },
+    },
     prompt: `Analyze this Next.js route and call report_route_analysis:\n\nFile: app/test/page.tsx\n\n${tc.code}`,
     stopWhen: stepCountIs(3),
     tools: {
