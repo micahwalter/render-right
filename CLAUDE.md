@@ -24,16 +24,22 @@ gh pr create --base main
 `tsx` doesn't auto-load `.env.local`, so pass the key explicitly:
 
 ```bash
-ANTHROPIC_API_KEY_RENDER_RIGHT=$(grep ANTHROPIC_API_KEY_RENDER_RIGHT .env.local | cut -d= -f2) npm run eval
+AI_GATEWAY_API_KEY=$(grep AI_GATEWAY_API_KEY .env.local | cut -d= -f2) npm run eval
 ```
 
-Expected result: **8/8** exact match. If a test returns `NO_RESULT`, the model didn't call `report_route_analysis` — check `stopWhen` step count and tool schema constraints.
+This runs the default 3-model comparison: `anthropic/claude-haiku-4.5`, `google/gemini-2.5-flash`, `meta/llama-4-scout`. To test a custom set:
+
+```bash
+AI_GATEWAY_API_KEY=... EVAL_MODELS=anthropic/claude-haiku-4.5,anthropic/claude-sonnet-4.6 npm run eval
+```
+
+Expected for Haiku: **8/8** exact match. Other models may vary. If a test returns `NO_RESULT`, the model didn't call `report_route_analysis` — check `stopWhen` step count and tool schema constraints.
 
 ---
 
 ## Environment variables
 
-Use `ANTHROPIC_API_KEY_RENDER_RIGHT` (not `ANTHROPIC_API_KEY`). Claude Desktop injects an empty `ANTHROPIC_API_KEY` and a malformed `ANTHROPIC_BASE_URL` into the shell environment, which would override `.env.local`. The project-specific name + hardcoded `baseURL: 'https://api.anthropic.com/v1'` in `createAnthropic()` bypasses the conflict.
+The app uses `AI_GATEWAY_API_KEY` (Vercel AI Gateway). Both `app/api/analyze/route.ts` and `evals/run.ts` use `createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })`. The previous `ANTHROPIC_API_KEY_RENDER_RIGHT` + `createAnthropic` setup has been replaced — do not reintroduce it.
 
 ---
 

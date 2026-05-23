@@ -1,14 +1,17 @@
 /**
- * Lightweight eval runner for render-right route classification.
+ * Multi-model eval runner for render-right route classification.
  *
- * Usage:  OPENAI_API_KEY=... npx tsx evals/run.ts
+ * Usage:
+ *   AI_GATEWAY_API_KEY=... npx tsx evals/run.ts
+ *   AI_GATEWAY_API_KEY=... EVAL_MODELS=anthropic/claude-haiku-4.5,google/gemini-2.5-flash npx tsx evals/run.ts
  *
- * Scores the agent's recommendedStrategy against each test case.
- * Acceptable variance: PPR vs ISR are both valid for some patterns.
+ * Default models: anthropic/claude-haiku-4.5, google/gemini-2.5-flash, meta/llama-4-scout
+ * Scores recommendedStrategy against each test case. PPR and ISR are treated as
+ * acceptable variance for each other.
  */
 
 import { generateText, tool, stepCountIs } from 'ai';
-import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGateway } from '@ai-sdk/gateway';
 import { z } from 'zod';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
@@ -16,6 +19,21 @@ import { dirname, join } from 'path';
 import { SYSTEM_PROMPT } from '../lib/prompts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const gateway = createGateway({
+  apiKey: process.env.AI_GATEWAY_API_KEY,
+});
+
+const DEFAULT_MODELS = [
+  'anthropic/claude-haiku-4.5',
+  'google/gemini-2.5-flash',
+  'meta/llama-4-scout',
+];
+
+const MODELS: string[] =
+  (process.env.EVAL_MODELS ?? '').trim().length > 0
+    ? process.env.EVAL_MODELS!.split(',').map(s => s.trim())
+    : DEFAULT_MODELS;
 
 interface TestCase {
   id: string;
@@ -39,22 +57,20 @@ const ACCEPTABLE_VARIANCE: Record<string, string[]> = {
   ISR: ['PPR'],
 };
 
-const anthropic = createAnthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY_RENDER_RIGHT,
-  baseURL: 'https://api.anthropic.com/v1',
-});
-
-async function evaluateCase(tc: TestCase): Promise<EvalResult> {
+async function evaluateCase(tc: TestCase, model: string): Promise<EvalResult> {
   let captured: Record<string, unknown> | null = null;
+  const isAnthropic = model.startsWith('anthropic/');
 
   await generateText({
-    model: anthropic('claude-haiku-4-5-20251001'),
+    model: gateway(model),
     system: {
       role: 'system',
       content: SYSTEM_PROMPT,
-      providerOptions: {
-        anthropic: { cacheControl: { type: 'ephemeral' } },
-      },
+      ...(isAnthropic && {
+        providerOptions: {
+          anthropic: { cacheControl: { type: 'ephemeral' } },
+        },
+      }),
     },
     prompt: `Analyze this Next.js route and call report_route_analysis:\n\nFile: app/test/page.tsx\n\n${tc.code}`,
     stopWhen: stepCountIs(3),
@@ -105,25 +121,30 @@ async function evaluateCase(tc: TestCase): Promise<EvalResult> {
   return { id: tc.id, expected: tc.expectedStrategy, got, pass, acceptable };
 }
 
-async function main() {
-  const casesPath = join(__dirname, 'test-cases.json');
-  const { cases }: { cases: TestCase[] } = JSON.parse(readFileSync(casesPath, 'utf-8'));
+function shortName(model: string): string {
+  return model.split('/')[1] ?? model;
+}
 
-  console.log(`\n🧪 Running ${cases.length} eval cases...\n`);
+function pad(s: string, n: number): string {
+  return s.length >= n ? s.slice(0, n) : s + ' '.repeat(n - s.length);
+}
 
+async function runModel(
+  cases: TestCase[],
+  model: string,
+): Promise<EvalResult[]> {
+  console.log(`\n📦  ${model}`);
   const results: EvalResult[] = [];
 
   for (const tc of cases) {
-    process.stdout.write(`  ${tc.id.padEnd(32)}`);
+    process.stdout.write(`  ${tc.id.padEnd(34)}`);
     try {
-      const result = await evaluateCase(tc);
+      const result = await evaluateCase(tc, model);
       results.push(result);
       if (result.pass) {
         console.log(`✅  ${result.got}`);
       } else if (result.acceptable) {
-        console.log(
-          `🟡  expected ${result.expected}, got ${result.got} (acceptable variance)`,
-        );
+        console.log(`🟡  expected ${result.expected}, got ${result.got} (acceptable variance)`);
       } else {
         console.log(`❌  expected ${result.expected}, got ${result.got}`);
       }
@@ -143,21 +164,82 @@ async function main() {
   const passed = results.filter(r => r.pass).length;
   const acceptable = results.filter(r => r.acceptable).length;
   const total = results.length;
-
   console.log(
-    `\n📊 Results: ${passed}/${total} exact match (${Math.round((passed / total) * 100)}%)`,
-  );
-  console.log(
-    `   Acceptable (incl. PPR/ISR variance): ${acceptable}/${total} (${Math.round((acceptable / total) * 100)}%)\n`,
+    `\n  Results: ${passed}/${total} exact  ${acceptable}/${total} acceptable\n`,
   );
 
-  const failures = results.filter(r => !r.acceptable);
-  if (failures.length > 0) {
-    console.log('Failures to investigate:');
-    failures.forEach(f =>
-      console.log(`  - ${f.id}: expected ${f.expected}, got ${f.got}`),
-    );
-    console.log('');
+  return results;
+}
+
+function printComparison(
+  cases: TestCase[],
+  allResults: Map<string, EvalResult[]>,
+): void {
+  const models = [...allResults.keys()];
+  const colW = 14;
+  const labelW = 34;
+
+  const line = '─'.repeat(labelW + models.length * (colW + 1));
+  console.log(`\n📊  Model comparison (${cases.length} test cases)`);
+  console.log(line);
+
+  // Header
+  const header = pad('Case', labelW) + models.map(m => pad(shortName(m), colW)).join(' ');
+  console.log(header);
+  console.log(line);
+
+  // Per-case rows
+  for (const tc of cases) {
+    const row =
+      pad(tc.id, labelW) +
+      models
+        .map(m => {
+          const r = allResults.get(m)?.find(x => x.id === tc.id);
+          if (!r) return pad('-', colW);
+          if (r.pass) return pad(`✅ ${r.got}`, colW);
+          if (r.acceptable) return pad(`🟡 ${r.got}`, colW);
+          if (r.got === 'ERROR') return pad('💥 ERROR', colW);
+          return pad(`❌ ${r.got}`, colW);
+        })
+        .join(' ');
+    console.log(row);
+  }
+
+  console.log(line);
+
+  // Score row
+  const scoreRow =
+    pad('Score (exact / acceptable)', labelW) +
+    models
+      .map(m => {
+        const rs = allResults.get(m) ?? [];
+        const p = rs.filter(r => r.pass).length;
+        const a = rs.filter(r => r.acceptable).length;
+        const t = cases.length;
+        return pad(`${p}/${t}  ${a}/${t}`, colW);
+      })
+      .join(' ');
+  console.log(scoreRow);
+  console.log(line);
+  console.log();
+}
+
+async function main() {
+  const casesPath = join(__dirname, 'test-cases.json');
+  const { cases }: { cases: TestCase[] } = JSON.parse(readFileSync(casesPath, 'utf-8'));
+
+  console.log(`\n🧪  Running ${cases.length} eval cases across ${MODELS.length} model(s):`);
+  MODELS.forEach(m => console.log(`    • ${m}`));
+
+  const allResults = new Map<string, EvalResult[]>();
+
+  for (const model of MODELS) {
+    const results = await runModel(cases, model);
+    allResults.set(model, results);
+  }
+
+  if (MODELS.length > 1) {
+    printComparison(cases, allResults);
   }
 }
 
