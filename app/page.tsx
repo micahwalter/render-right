@@ -190,13 +190,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* Final summary from Claude — shown after all cards are rendered */}
-            {isComplete && assistantText && (
-              <div className="mt-6 pt-6 border-t border-white/8 text-white/50 text-xs leading-relaxed whitespace-pre-wrap font-mono">
-                {assistantText}
-              </div>
-            )}
-
             {error && (
               <div className="border border-red-500/20 bg-red-500/5 rounded-lg px-4 py-3 text-red-400 text-sm mt-4">
                 {error.message}
