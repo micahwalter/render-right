@@ -158,11 +158,11 @@ Configure your Anthropic key as BYOK in the Vercel dashboard under AI Gateway �
 
 ## Roadmap
 
-- [ ] Edge Runtime on `/api/analyze` — requires swapping `Buffer.from` → `atob` + `TextDecoder` in `lib/github.ts`
-- [ ] Copy-to-clipboard on `implementationHint` code snippets
-- [ ] Email / Slack report export — send the full analysis as a formatted digest
-- [ ] Private repo support — OAuth flow to obtain a scoped GitHub token from the user
-- [ ] Diff mode — re-analyze after making changes and highlight what improved
-- [ ] Configurable model in the UI — let users pick the analysis model at runtime via the gateway
-- [ ] Per-route cost estimate — attach dollar figures to recommendations based on expected traffic
-- [ ] Expanded eval coverage — more PPR vs. ISR boundary cases and edge runtime signal patterns
+- [ ] [Edge Runtime on `/api/analyze`](https://github.com/micahwalter/render-right/issues/5) — requires swapping `Buffer.from` → `atob` + `TextDecoder` in `lib/github.ts`
+- [ ] [Copy-to-clipboard on `implementationHint` code snippets](https://github.com/micahwalter/render-right/issues/6)
+- [ ] [Email / Slack report export](https://github.com/micahwalter/render-right/issues/7) — send the full analysis as a formatted digest
+- [ ] [Private repo support](https://github.com/micahwalter/render-right/issues/8) — OAuth flow to obtain a scoped GitHub token from the user
+- [ ] [Diff mode](https://github.com/micahwalter/render-right/issues/9) — re-analyze after making changes and highlight what improved
+- [ ] [Configurable model in the UI](https://github.com/micahwalter/render-right/issues/10) — let users pick the analysis model at runtime via the gateway
+- [ ] [Per-route cost estimate](https://github.com/micahwalter/render-right/issues/11) — attach dollar figures to recommendations based on expected traffic
+- [ ] [Expanded eval coverage](https://github.com/micahwalter/render-right/issues/12) — more PPR vs. ISR boundary cases and edge runtime signal patterns
