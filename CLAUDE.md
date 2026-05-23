@@ -91,3 +91,21 @@ Static tools defined with `tool()` produce message parts typed `'tool-{toolName}
 ## Edge Runtime
 
 `app/api/analyze/route.ts` exports `runtime = 'edge'`. `lib/github.ts` decodes base64 content with `atob` + `TextDecoder` (not `Buffer`) to stay Edge-compatible.
+
+## Vercel deployment notes
+
+- `maxDuration = 60` is exported from `app/api/analyze/route.ts`. Without it, Vercel cuts the streaming response after 10s. The agent can take 30–60s on large repos. Hobby cap: 60s; Pro cap: 300s.
+- `proxy.ts` handles HTTP Basic Auth (active when `SITE_PASSWORD` is set). Next.js 16 renamed `middleware.ts` → `proxy.ts`; the exported function is `proxy`, not `middleware`.
+
+## Key files
+
+| File | Purpose |
+|---|---|
+| `app/api/analyze/route.ts` | Streaming AI endpoint — 3 tools: `list_routes`, `read_file`, `report_route_analysis` |
+| `app/page.tsx` | Main UI — `useChat`, streaming card display, agent log |
+| `components/RouteCard.tsx` | Per-route analysis card with color-coded strategy badges and copy button |
+| `lib/github.ts` | GitHub Trees + Contents API — lists routes, reads files, caches 5 min |
+| `lib/prompts.ts` | System prompt — all 6 strategies, signals, decision guide |
+| `proxy.ts` | HTTP Basic Auth — active when `SITE_PASSWORD` env var is set |
+| `evals/run.ts` | Eval harness — runs test cases across multiple models |
+| `evals/test-cases.json` | 8 annotated test cases (SSG, ISR, SSR, PPR, Edge, force-dynamic) |
