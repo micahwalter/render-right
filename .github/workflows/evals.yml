@@ -1,0 +1,29 @@
+name: Evals
+
+on:
+  pull_request:
+    paths:
+      - 'lib/prompts.ts'
+      - 'evals/**'
+      - 'app/api/analyze/route.ts'
+
+jobs:
+  eval:
+    name: Run eval suite (Haiku)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run evals
+        env:
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+          EVAL_MODELS: anthropic/claude-haiku-4.5
+        run: npm run eval
