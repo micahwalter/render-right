@@ -1,17 +1,13 @@
 import { streamText, convertToModelMessages, tool, stepCountIs } from 'ai';
-import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGateway } from '@ai-sdk/gateway';
 import { z } from 'zod';
 import { listRoutes, readFile } from '@/lib/github';
 import { SYSTEM_PROMPT } from '@/lib/prompts';
 
 export const maxDuration = 60;
 
-// Use createAnthropic with explicit config so that shell env vars injected by
-// other tools (e.g. Claude Desktop sets ANTHROPIC_BASE_URL without /v1 and
-// an empty ANTHROPIC_API_KEY) don't override our project settings.
-const anthropic = createAnthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY_RENDER_RIGHT,
-  baseURL: 'https://api.anthropic.com/v1',
+const gateway = createGateway({
+  apiKey: process.env.AI_GATEWAY_API_KEY,
 });
 
 export async function POST(req: Request) {
@@ -19,7 +15,7 @@ export async function POST(req: Request) {
   const modelMessages = await convertToModelMessages(messages);
 
   const result = streamText({
-    model: anthropic('claude-sonnet-4-6'),
+    model: gateway('anthropic/claude-sonnet-4.6'),
     system: {
       role: 'system',
       content: SYSTEM_PROMPT,
