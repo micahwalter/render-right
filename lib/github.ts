@@ -103,7 +103,9 @@ export async function readFile(
   const data = await res.json();
 
   if (data.encoding === 'base64') {
-    const raw = Buffer.from(data.content, 'base64').toString('utf-8');
+    // atob + TextDecoder instead of Buffer — required for Edge Runtime compatibility
+    const bytes = Uint8Array.from(atob(data.content.replace(/\s/g, '')), c => c.charCodeAt(0));
+    const raw = new TextDecoder().decode(bytes);
     const truncated = raw.length > 4000;
     return {
       content: truncated

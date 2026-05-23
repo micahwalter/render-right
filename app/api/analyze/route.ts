@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { listRoutes, readFile } from '@/lib/github';
 import { SYSTEM_PROMPT } from '@/lib/prompts';
 
+export const runtime = 'edge';
 export const maxDuration = 60;
 
 const gateway = createGateway({
