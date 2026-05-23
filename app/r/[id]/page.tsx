@@ -7,7 +7,9 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   const { blobs } = await list({ prefix: `reports/${id}` });
   if (!blobs.length) notFound();
 
-  const res = await fetch(blobs[0].url);
+  const res = await fetch(blobs[0].url, {
+    headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
+  });
   const { analyses, repoUrl }: { analyses: RouteAnalysis[]; repoUrl: string } = await res.json();
 
   const highPriority = analyses.filter(a => a.priority === 'high' && !a.isAlreadyOptimal);
