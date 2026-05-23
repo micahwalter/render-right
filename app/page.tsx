@@ -15,6 +15,7 @@ export default function Home() {
   const [repoUrl, setRepoUrl] = useState('');
   const [hasStarted, setHasStarted] = useState(false);
   const [shareStatus, setShareStatus] = useState<'idle' | 'loading' | 'copied' | 'error'>('idle');
+  const [shareError, setShareError] = useState('');
 
   const { messages, sendMessage, status, error } = useChat({
     transport: new DefaultChatTransport({ api: '/api/analyze' }),
@@ -61,13 +62,15 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ analyses, repoUrl }),
       });
-      const { id } = await res.json();
-      await navigator.clipboard.writeText(`${window.location.origin}/r/${id}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+      await navigator.clipboard.writeText(`${window.location.origin}/r/${data.id}`);
       setShareStatus('copied');
       setTimeout(() => setShareStatus('idle'), 2000);
-    } catch {
+    } catch (err) {
+      setShareError(err instanceof Error ? err.message : 'Unknown error');
       setShareStatus('error');
-      setTimeout(() => setShareStatus('idle'), 2000);
+      setTimeout(() => setShareStatus('idle'), 3000);
     }
   };
 
@@ -103,7 +106,7 @@ export default function Home() {
                     : shareStatus === 'copied'
                       ? 'Link copied!'
                       : shareStatus === 'error'
-                        ? 'Failed'
+                        ? `Failed: ${shareError}`
                         : 'Share report'}
                 </button>
               )}
