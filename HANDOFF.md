@@ -8,30 +8,26 @@ AI-powered Next.js rendering strategy advisor. Paste a public GitHub repo URL, a
 
 ---
 
-## Current state (as of last session)
+## Current state
 
-Everything is working end-to-end locally. The app is on `main` and **ready to deploy to Vercel**.
+The app is **live on Vercel** and working end-to-end.
 
 ### What works
 - Route analysis streams route cards progressively as the agent reads each file
 - Scrollable agent log shows full Claude output while it's working
 - Summary text from Claude is shown below cards after analysis completes
 - Three working example repos in the UI (saas-starter, app-router-playground, tailwind-blog)
-- HTTP Basic Auth proxy (`proxy.ts`) — activate by setting `SITE_PASSWORD` env var
-- Eval suite (`npm run eval`) — 8 test cases, expects 7–8/8 pass rate
+- HTTP Basic Auth proxy (`proxy.ts`) — active when `SITE_PASSWORD` env var is set
+- Eval suite (`npm run eval`) — 8 test cases, **8/8 pass rate** (exact match)
+- Prompt caching on system prompt — cuts latency on warm requests (2048-token min met by `lib/prompts.ts`)
 
-### Deploying to Vercel
-
-1. Go to **vercel.com/new** → import `micahwalter/render-right`
-2. Add these environment variables before deploying:
+### Environment variables (Vercel + local)
 
 | Variable | Notes |
 |---|---|
-| `ANTHROPIC_API_KEY_RENDER_RIGHT` | Anthropic API key (project-specific name avoids Claude Desktop conflicts) |
+| `ANTHROPIC_API_KEY_RENDER_RIGHT` | Anthropic API key — project-specific name avoids Claude Desktop conflicts |
 | `GITHUB_TOKEN` | Optional — raises GitHub rate limit from 60 to 5,000 req/hr |
 | `SITE_PASSWORD` | Password for HTTP Basic Auth; leave unset to skip auth |
-
-3. Click Deploy — Next.js auto-detected, no config changes needed.
 
 ---
 
@@ -42,6 +38,9 @@ Claude Desktop injects `ANTHROPIC_BASE_URL=https://api.anthropic.com` (missing `
 
 ### `maxDuration = 60` on the analyze route
 `app/api/analyze/route.ts` exports `maxDuration = 60`. Without this, Vercel cuts off the streaming response after 10s (the platform default). The AI agent can take 30–60s to read a full repo. Vercel Hobby supports up to 60s; Pro supports up to 300s.
+
+### Prompt caching
+Both `app/api/analyze/route.ts` and `evals/run.ts` pass the system prompt as a `SystemModelMessage` with `providerOptions.anthropic.cacheControl: { type: 'ephemeral' }`. This caches the tools + system prefix together (tools render before system in the Anthropic API wire format). Minimum cache threshold: 2048 tokens for Sonnet 4.6, 4096 for Haiku 4.5. The system prompt in `lib/prompts.ts` is ~900 tokens, but tools push the total well past both thresholds.
 
 ### `proxy.ts` (was `middleware.ts`)
 Next.js 16 deprecated the `middleware` file convention in favour of `proxy`. The file was migrated with the official codemod (`npx @next/codemod middleware-to-proxy`) — the exported function is now named `proxy` instead of `middleware`. Functionally identical.
@@ -54,15 +53,19 @@ Next.js 16 deprecated the `middleware` file convention in favour of `proxy`. The
 - Transport: `new DefaultChatTransport({ api: '/api/analyze' })` (no `api` prop on `useChat`)
 - `append()` → `sendMessage({ text: '...' })`
 - `isLoading` → `status === 'submitted' || status === 'streaming'`
+- System prompt caching: pass `{ role: 'system', content: SYSTEM_PROMPT, providerOptions: { anthropic: { cacheControl: { type: 'ephemeral' } } } }` — the `SystemModelMessage` type
 
 ### Why tool parts filter on `'tool-report_route_analysis'` (not `'dynamic-tool'`)
 Static tools defined with `tool()` produce message parts typed `'tool-{toolName}'`. The code originally filtered for `'dynamic-tool'` which never matched, so cards never appeared. Analysis data lives in `input` (args the model sent to the tool), not `output`. See `app/page.tsx` lines ~26–31.
+
+### Edge Runtime — not yet on the analyze route
+The original pitch mentioned Edge Runtime for lower cold-start latency. `app/api/analyze/route.ts` does **not** currently export `runtime = 'edge'`. Reason: `lib/github.ts` uses `Buffer.from(data.content, 'base64')` which is Node.js-only. To enable Edge Runtime, replace with `atob(data.content)` + `TextDecoder`. Noted as a future improvement.
 
 ### Models available on this API key
 Only Claude 4.x — `claude-sonnet-4-6` (main app), `claude-haiku-4-5-20251001` (evals). Claude 3.x models return 404.
 
 ### Secret safety
-`ANTHROPIC_API_KEY_RENDER_RIGHT` and `GITHUB_TOKEN` are only read in server-side code (`app/api/analyze/route.ts`, `lib/github.ts`). Neither has a `NEXT_PUBLIC_` prefix, so Next.js never bundles them into the browser. The browser only receives streamed text and tool `input` objects.
+`ANTHROPIC_API_KEY_RENDER_RIGHT` and `GITHUB_TOKEN` are only read in server-side code (`app/api/analyze/route.ts`, `lib/github.ts`). Neither has a `NEXT_PUBLIC_` prefix, so Next.js never bundles them into the browser.
 
 ---
 
@@ -88,18 +91,30 @@ Only Claude 4.x — `claude-sonnet-4-6` (main app), `claude-haiku-4-5-20251001` 
 ```bash
 cd /Users/micah/Code/github.com/micahwalter/render-right
 npm run dev        # http://localhost:3000
-npm run eval       # run eval suite (needs ANTHROPIC_API_KEY_RENDER_RIGHT)
+
+# Run evals (tsx doesn't auto-load .env.local — pass the key explicitly)
+ANTHROPIC_API_KEY_RENDER_RIGHT=$(grep ANTHROPIC_API_KEY_RENDER_RIGHT .env.local | cut -d= -f2) npm run eval
 ```
 
-`.env.local` already has the Anthropic API key set as `ANTHROPIC_API_KEY_RENDER_RIGHT`.
+---
+
+## Git workflow
+
+Always work on a feature branch. Never commit directly to `main`.
+
+```bash
+git checkout -b claude/short-description-XXXXX
+# ... make changes ...
+git push -u origin claude/short-description-XXXXX
+gh pr create --base main
+```
 
 ---
 
 ## Possible next steps
 
-- **Deploy to Vercel** (immediate — see above)
-- Set a `SITE_PASSWORD` in Vercel env vars to lock down the deployed site
-- Add a `GITHUB_TOKEN` to Vercel env vars to raise the GitHub rate limit
-- Run `npm run eval` and share results
+- Enable Edge Runtime on `/api/analyze` — swap `Buffer.from` → `atob` + `TextDecoder` in `lib/github.ts`
 - Add a copy-to-clipboard button on `implementationHint` code snippets
 - Consider streaming the agent log even after completion (currently hides when done)
+- Add more eval test cases to improve coverage of PPR vs ISR edge cases
+- Set a `SITE_PASSWORD` in Vercel env vars to lock down the deployed site
