@@ -1,6 +1,5 @@
 import { streamText, convertToModelMessages, tool, stepCountIs } from 'ai';
 import { createGateway } from '@ai-sdk/gateway';
-import { createAnthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
 import { listRoutes, readFile } from '@/lib/github';
 import { SYSTEM_PROMPT } from '@/lib/prompts';
@@ -10,10 +9,6 @@ export const maxDuration = 300;
 
 const gateway = createGateway({
   apiKey: process.env.AI_GATEWAY_API_KEY,
-});
-
-const anthropic = createAnthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 const ALLOWED_MODELS = new Set([
@@ -34,12 +29,8 @@ export async function POST(req: Request) {
   const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : DEFAULT_MODEL;
   const modelMessages = await convertToModelMessages(messages);
 
-  const resolvedModel = model.startsWith('anthropic/')
-    ? anthropic(model.replace('anthropic/', ''))
-    : gateway(model);
-
   const result = streamText({
-    model: resolvedModel,
+    model: gateway(model),
     system: {
       role: 'system',
       content: SYSTEM_PROMPT,

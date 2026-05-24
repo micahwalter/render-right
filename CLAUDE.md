@@ -39,10 +39,9 @@ Expected for Haiku: **8/8** exact match. Other models may vary. If a test return
 
 ## Environment variables
 
-The app uses two provider paths:
+The app uses `AI_GATEWAY_API_KEY` (Vercel AI Gateway) for all models. Both `app/api/analyze/route.ts` and `evals/run.ts` use `createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })`.
 
-- **`ANTHROPIC_API_KEY`** — used by `createAnthropic` directly for all `anthropic/*` models. This bypasses the gateway so Vercel free-credit limits don't apply to Claude.
-- **`AI_GATEWAY_API_KEY`** — used by `createGateway` for all other models (Google, Meta, OpenAI). `evals/run.ts` also uses the gateway for its Haiku runs.
+Anthropic BYOK is configured in the Vercel dashboard (AI Gateway → Bring Your Own Key). The gateway automatically routes `anthropic/*` requests through the team's Anthropic key — no code change or extra env var needed. Do not reintroduce `createAnthropic` or a separate `ANTHROPIC_API_KEY` env var.
 
 ---
 
