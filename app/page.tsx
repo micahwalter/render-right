@@ -3,8 +3,44 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
-import ReactMarkdown from 'react-markdown';
 import RouteCard, { type RouteAnalysis } from '@/components/RouteCard';
+
+function buildSummary(analyses: RouteAnalysis[]): string {
+  const total = analyses.length;
+  const needsWork = analyses.filter(a => !a.isAlreadyOptimal);
+  const optimal = total - needsWork.length;
+  const highPri = needsWork.filter(a => a.priority === 'high');
+  const hasSavings = needsWork.some(
+    a => a.costImpact === 'high-savings' || a.costImpact === 'medium-savings',
+  );
+
+  if (needsWork.length === 0) {
+    return `Analyzed ${total} route${total !== 1 ? 's' : ''}. All are already using optimal rendering strategies.`;
+  }
+
+  const parts: string[] = [`Analyzed ${total} route${total !== 1 ? 's' : ''}.`];
+
+  if (highPri.length > 0) {
+    const named = highPri.slice(0, 2).map(a => a.routePath).join(' and ');
+    parts.push(
+      highPri.length === 1
+        ? `${named} is the top priority.`
+        : `${highPri.length} routes need immediate attention, including ${named}.`,
+    );
+  }
+
+  if (hasSavings) {
+    parts.push(
+      `Addressing ${needsWork.length === 1 ? 'it' : 'these'} could reduce server compute costs noticeably.`,
+    );
+  }
+
+  if (optimal > 0) {
+    parts.push(`${optimal} route${optimal !== 1 ? 's are' : ' is'} already well-optimized.`);
+  }
+
+  return parts.join(' ');
+}
 
 const EXAMPLES = [
   { url: 'https://github.com/nextjs/saas-starter', label: 'saas-starter' },
@@ -254,27 +290,11 @@ export default function Home() {
               </div>
             )}
 
-            {/* AI-generated summary — shown when complete */}
-            {isComplete && assistantText && (
-              <div className="rounded-lg border border-white/8 bg-white/[0.02] px-5 py-5 mb-6">
-                <p className="text-xs text-white/30 font-mono mb-3">Analysis summary</p>
-                <ReactMarkdown
-                  components={{
-                    h1: ({ children }) => <h1 className="text-base font-semibold text-white mb-3">{children}</h1>,
-                    h2: ({ children }) => <h2 className="text-sm font-medium text-white/80 mb-2 mt-4 first:mt-0">{children}</h2>,
-                    h3: ({ children }) => <h3 className="text-xs font-medium text-white/70 mb-1 mt-3">{children}</h3>,
-                    p: ({ children }) => <p className="text-sm text-white/55 mb-2 last:mb-0 leading-relaxed">{children}</p>,
-                    ul: ({ children }) => <ul className="mb-2 space-y-1">{children}</ul>,
-                    ol: ({ children }) => <ol className="mb-2 space-y-1 list-decimal pl-4">{children}</ol>,
-                    li: ({ children }) => <li className="text-sm text-white/55 leading-relaxed list-disc ml-4">{children}</li>,
-                    strong: ({ children }) => <strong className="text-white/80 font-medium">{children}</strong>,
-                    em: ({ children }) => <em className="text-white/70 italic">{children}</em>,
-                    code: ({ children }) => <code className="text-xs font-mono bg-white/8 px-1 py-0.5 rounded text-white/70">{children}</code>,
-                  }}
-                >
-                  {assistantText}
-                </ReactMarkdown>
-              </div>
+            {/* Computed summary paragraph — shown when complete */}
+            {isComplete && (
+              <p className="text-sm text-white/50 leading-relaxed mb-6">
+                {buildSummary(analyses)}
+              </p>
             )}
 
             {/* Route cards — appear as the agent reports each one */}
