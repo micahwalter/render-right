@@ -1,6 +1,5 @@
 import { streamText, convertToModelMessages, tool, stepCountIs } from 'ai';
 import { createGateway } from '@ai-sdk/gateway';
-import { createAnthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
 import { listRoutes, readFile } from '@/lib/github';
 import { SYSTEM_PROMPT } from '@/lib/prompts';
@@ -26,18 +25,12 @@ const ALLOWED_MODELS = new Set([
 const DEFAULT_MODEL = 'anthropic/claude-sonnet-4.6';
 
 export async function POST(req: Request) {
-  const { messages, model: requestedModel, apiKey } = await req.json();
+  const { messages, model: requestedModel } = await req.json();
   const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : DEFAULT_MODEL;
   const modelMessages = await convertToModelMessages(messages);
 
-  const isAnthropic = model.startsWith('anthropic/');
-  const resolvedModel =
-    isAnthropic && apiKey
-      ? createAnthropic({ apiKey })(model.replace('anthropic/', ''))
-      : gateway(model);
-
   const result = streamText({
-    model: resolvedModel,
+    model: gateway(model),
     system: {
       role: 'system',
       content: SYSTEM_PROMPT,
