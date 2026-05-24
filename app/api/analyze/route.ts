@@ -16,7 +16,7 @@ const ALLOWED_MODELS = new Set([
   'anthropic/claude-haiku-4.5',
   'google/gemini-2.5-flash',
   'google/gemini-2.5-pro',
-  'meta/llama-4-maverick',
+  'meta/llama-4-scout',
 ]);
 
 const DEFAULT_MODEL = 'anthropic/claude-sonnet-4.6';
