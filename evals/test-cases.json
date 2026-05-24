@@ -66,6 +66,62 @@
       "expectedStrategy": "SSG",
       "expectedPriority": "high",
       "notes": "force-dynamic on static content is a costly mistake — every visit hits a function"
+    },
+    {
+      "id": "ppr-suspense-user-reviews",
+      "description": "Product page with cached static info and a Suspense-wrapped dynamic user review feed",
+      "code": "import { Suspense } from 'react';\n\nexport default async function Page({ params }) {\n  const product = await fetch(`/api/products/${params.id}`, {\n    next: { revalidate: 3600 }\n  }).then(r => r.json());\n\n  return (\n    <div>\n      <ProductInfo product={product} />\n      <Suspense fallback={<p>Loading reviews...</p>}>\n        <UserReviews productId={params.id} />\n      </Suspense>\n    </div>\n  );\n}",
+      "expectedStrategy": "PPR",
+      "expectedPriority": "high",
+      "notes": "Static product shell (ISR data) + Suspense-wrapped dynamic review island — textbook PPR pattern isolating the Suspense boundary signal"
+    },
+    {
+      "id": "isr-news-feed-optimal",
+      "description": "News listing page with explicit revalidation and no user-specific data or dynamic islands",
+      "code": "export default async function Page() {\n  const articles = await fetch('https://api.example.com/news', {\n    next: { revalidate: 300 }\n  }).then(r => r.json());\n\n  return (\n    <main>\n      <h1>Latest News</h1>\n      {articles.map(a => (\n        <article key={a.id}>\n          <h2>{a.headline}</h2>\n          <p>{a.summary}</p>\n        </article>\n      ))}\n    </main>\n  );\n}",
+      "expectedStrategy": "ISR",
+      "expectedPriority": "low",
+      "notes": "All data cached with 5-minute revalidation, no Suspense boundaries, no user-specific content — correctly ISR; should not be flagged as PPR candidate"
+    },
+    {
+      "id": "ppr-client-cart-widget",
+      "description": "Category page with cached static content and a Suspense-wrapped client-component cart widget below the fold",
+      "code": "import { Suspense } from 'react';\nimport CartWidget from '@/components/CartWidget'; // 'use client'\n\nexport default async function Page({ params }) {\n  const category = await fetch(`/api/categories/${params.slug}`, {\n    next: { revalidate: 7200 }\n  }).then(r => r.json());\n\n  return (\n    <div>\n      <h1>{category.name}</h1>\n      <ProductGrid products={category.products} />\n      <Suspense fallback={<div>Loading cart...</div>}>\n        <CartWidget />\n      </Suspense>\n    </div>\n  );\n}",
+      "expectedStrategy": "PPR",
+      "expectedPriority": "high",
+      "notes": "Client component island in Suspense below the fold alongside cached ISR data — isolates the 'client component below fold' PPR signal"
+    },
+    {
+      "id": "edge-geo-no-runtime",
+      "description": "Pricing page that reads a Vercel geo header for currency localization but is missing the edge runtime export",
+      "code": "import { headers } from 'next/headers';\n\nexport default async function Page() {\n  const headersList = await headers();\n  const country = headersList.get('x-vercel-ip-country') ?? 'US';\n  const currency = country === 'GB' ? 'GBP' : country === 'EU' ? 'EUR' : 'USD';\n\n  return (\n    <main>\n      <h1>Pricing</h1>\n      <PricingTable currency={currency} />\n    </main>\n  );\n}",
+      "expectedStrategy": "Edge",
+      "expectedPriority": "high",
+      "notes": "Geo header inspection with no DB calls — missing runtime='edge' means this runs as Node.js SSR; adding Edge runtime eliminates cold-start latency for this lightweight check"
+    },
+    {
+      "id": "edge-ab-test-no-runtime",
+      "description": "Homepage with cookie-based A/B variant selection but no edge runtime export",
+      "code": "import { cookies } from 'next/headers';\n\nexport default async function Page() {\n  const cookieStore = await cookies();\n  const variant = cookieStore.get('ab_hero')?.value ?? 'control';\n\n  return variant === 'treatment' ? <TreatmentHero /> : <ControlHero />;\n}",
+      "expectedStrategy": "Edge",
+      "expectedPriority": "medium",
+      "notes": "Pure cookie inspection for A/B routing with no database calls — ideal Edge pattern; adding runtime='edge' eliminates Node.js cold start for this lightweight gate"
+    },
+    {
+      "id": "ppr-force-dynamic-suspense",
+      "description": "Product page with force-dynamic override that suppresses PPR despite having Suspense boundaries and cacheable outer data",
+      "code": "export const dynamic = 'force-dynamic';\nimport { Suspense } from 'react';\n\nexport default async function Page({ params }) {\n  const product = await fetch(`/api/products/${params.id}`).then(r => r.json());\n\n  return (\n    <div>\n      <ProductInfo product={product} />\n      <Suspense fallback={<Spinner />}>\n        <RelatedProducts productId={params.id} />\n      </Suspense>\n    </div>\n  );\n}",
+      "expectedStrategy": "PPR",
+      "expectedPriority": "high",
+      "notes": "force-dynamic blocks ISR and PPR; removing it and adding revalidate to the outer fetch would unlock static shell + streaming dynamic island via PPR"
+    },
+    {
+      "id": "isr-product-listing-no-cache",
+      "description": "Product catalog page fetching from an API with no cache directive, causing SSR on every request",
+      "code": "export default async function Page({ params }) {\n  const products = await fetch(\n    `/api/catalog/${params.category}`\n  ).then(r => r.json());\n\n  return (\n    <div>\n      <h1>{params.category}</h1>\n      <ul>\n        {products.map(p => (\n          <li key={p.id}>{p.name} — ${p.price}</li>\n        ))}\n      </ul>\n    </div>\n  );\n}",
+      "expectedStrategy": "ISR",
+      "expectedPriority": "high",
+      "notes": "Next.js 15 defaults fetch() to no-store — every page load hits the catalog API; adding revalidate would serve from cache and cut costs dramatically"
     }
   ]
 }
