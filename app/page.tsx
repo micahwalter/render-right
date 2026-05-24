@@ -163,7 +163,7 @@ export default function Home() {
 
         {/* Input */}
         <div className={hasStarted ? 'mb-8' : 'mb-12'}>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <input
               type="url"
               value={repoUrl}
@@ -171,31 +171,33 @@ export default function Home() {
               onKeyDown={e => e.key === 'Enter' && handleAnalyze()}
               placeholder="https://github.com/owner/repo"
               disabled={isLoading}
-              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm placeholder:text-white/25 focus:outline-none focus:border-white/25 disabled:opacity-50 transition-colors"
+              className="flex-1 min-w-0 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm placeholder:text-white/25 focus:outline-none focus:border-white/25 disabled:opacity-50 transition-colors"
             />
-            <select
-              value={selectedModel}
-              onChange={e => {
-                setSelectedModel(e.target.value);
-                selectedModelRef.current = e.target.value;
-              }}
-              disabled={isLoading}
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-3 text-sm text-white/60 focus:outline-none focus:border-white/25 disabled:opacity-50 transition-colors cursor-pointer appearance-none"
-              aria-label="Model"
-            >
-              {MODELS.map(m => (
-                <option key={m.id} value={m.id} className="bg-zinc-900 text-white">
-                  {m.label}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={() => handleAnalyze()}
-              disabled={isLoading || !repoUrl.trim()}
-              className="bg-white text-black px-5 py-3 rounded-lg text-sm font-medium hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity cursor-pointer"
-            >
-              {isLoading ? 'Analyzing…' : 'Analyze'}
-            </button>
+            <div className="flex gap-2">
+              <select
+                value={selectedModel}
+                onChange={e => {
+                  setSelectedModel(e.target.value);
+                  selectedModelRef.current = e.target.value;
+                }}
+                disabled={isLoading}
+                className="flex-1 sm:flex-none bg-white/5 border border-white/10 rounded-lg px-3 py-3 text-sm text-white/60 focus:outline-none focus:border-white/25 disabled:opacity-50 transition-colors cursor-pointer appearance-none"
+                aria-label="Model"
+              >
+                {MODELS.map(m => (
+                  <option key={m.id} value={m.id} className="bg-zinc-900 text-white">
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => handleAnalyze()}
+                disabled={isLoading || !repoUrl.trim()}
+                className="shrink-0 bg-white text-black px-5 py-3 rounded-lg text-sm font-medium hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity cursor-pointer"
+              >
+                {isLoading ? 'Analyzing…' : 'Analyze'}
+              </button>
+            </div>
           </div>
 
           {!hasStarted && (
