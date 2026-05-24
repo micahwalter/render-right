@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
+import ReactMarkdown from 'react-markdown';
 import RouteCard, { type RouteAnalysis } from '@/components/RouteCard';
 
 const EXAMPLES = [
@@ -57,8 +58,6 @@ export default function Home() {
     .map(p => (p as { type: 'text'; text: string }).text)
     .join('') ?? '';
 
-  // Only show text as status while still loading; once complete it becomes the summary
-  const statusText = isLoading ? assistantText : '';
 
   const handleAnalyze = (url = repoUrl) => {
     const trimmed = url.trim();
@@ -229,7 +228,7 @@ export default function Home() {
                   ref={logRef}
                   className="max-h-40 overflow-y-auto px-3 py-2 text-xs text-white/40 font-mono leading-relaxed whitespace-pre-wrap"
                 >
-                  {statusText || 'Fetching repository…'}
+                  {assistantText || 'Fetching repository…'}
                 </div>
               </div>
             )}
@@ -252,6 +251,29 @@ export default function Home() {
                 <span className="text-emerald-400 text-sm font-medium">
                   Rendering strategies look well-optimized across these routes.
                 </span>
+              </div>
+            )}
+
+            {/* AI-generated summary — shown when complete */}
+            {isComplete && assistantText && (
+              <div className="rounded-lg border border-white/8 bg-white/[0.02] px-5 py-5 mb-6">
+                <p className="text-xs text-white/30 font-mono mb-3">Analysis summary</p>
+                <ReactMarkdown
+                  components={{
+                    h1: ({ children }) => <h1 className="text-base font-semibold text-white mb-3">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-sm font-medium text-white/80 mb-2 mt-4 first:mt-0">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-xs font-medium text-white/70 mb-1 mt-3">{children}</h3>,
+                    p: ({ children }) => <p className="text-sm text-white/55 mb-2 last:mb-0 leading-relaxed">{children}</p>,
+                    ul: ({ children }) => <ul className="mb-2 space-y-1">{children}</ul>,
+                    ol: ({ children }) => <ol className="mb-2 space-y-1 list-decimal pl-4">{children}</ol>,
+                    li: ({ children }) => <li className="text-sm text-white/55 leading-relaxed list-disc ml-4">{children}</li>,
+                    strong: ({ children }) => <strong className="text-white/80 font-medium">{children}</strong>,
+                    em: ({ children }) => <em className="text-white/70 italic">{children}</em>,
+                    code: ({ children }) => <code className="text-xs font-mono bg-white/8 px-1 py-0.5 rounded text-white/70">{children}</code>,
+                  }}
+                >
+                  {assistantText}
+                </ReactMarkdown>
               </div>
             )}
 
