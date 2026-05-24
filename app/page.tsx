@@ -17,6 +17,8 @@ const MODELS = [
   { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
   { id: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
   { id: 'meta/llama-4-maverick', label: 'Llama 4 Maverick' },
+  { id: 'openai/gpt-4o', label: 'GPT-4o' },
+  { id: 'openai/gpt-4o-mini', label: 'GPT-4o mini' },
 ];
 
 const DEFAULT_MODEL = 'anthropic/claude-sonnet-4.6';

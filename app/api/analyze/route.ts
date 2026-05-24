@@ -17,6 +17,9 @@ const ALLOWED_MODELS = new Set([
   'google/gemini-2.5-flash',
   'google/gemini-2.5-pro',
   'meta/llama-4-scout',
+  'meta/llama-4-maverick',
+  'openai/gpt-4o',
+  'openai/gpt-4o-mini',
 ]);
 
 const DEFAULT_MODEL = 'anthropic/claude-sonnet-4.6';
