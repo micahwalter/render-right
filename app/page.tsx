@@ -30,12 +30,15 @@ export default function Home() {
   const [shareError, setShareError] = useState('');
   const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
   const selectedModelRef = useRef(selectedModel);
+  const [apiKey, setApiKey] = useState('');
+  const apiKeyRef = useRef(apiKey);
 
   const transport = useMemo(() => new DefaultChatTransport({
     api: '/api/analyze',
     fetch: async (url, init) => {
       const body = init?.body ? JSON.parse(init.body as string) : {};
       body.model = selectedModelRef.current;
+      if (apiKeyRef.current) body.apiKey = apiKeyRef.current;
       return globalThis.fetch(url, { ...init, body: JSON.stringify(body) });
     },
   }), []);
@@ -199,6 +202,22 @@ export default function Home() {
               </button>
             </div>
           </div>
+
+          {selectedModel.startsWith('anthropic/') && (
+            <div className="mt-2">
+              <input
+                type="password"
+                value={apiKey}
+                onChange={e => {
+                  setApiKey(e.target.value);
+                  apiKeyRef.current = e.target.value;
+                }}
+                placeholder="Anthropic API key (optional — use your own to bypass shared limits)"
+                disabled={isLoading}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm placeholder:text-white/25 focus:outline-none focus:border-white/25 disabled:opacity-50 transition-colors font-mono"
+              />
+            </div>
+          )}
 
           {!hasStarted && (
             <div className="flex items-center gap-3 mt-3">
