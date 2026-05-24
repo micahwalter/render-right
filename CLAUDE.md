@@ -39,7 +39,10 @@ Expected for Haiku: **8/8** exact match. Other models may vary. If a test return
 
 ## Environment variables
 
-The app uses `AI_GATEWAY_API_KEY` (Vercel AI Gateway). Both `app/api/analyze/route.ts` and `evals/run.ts` use `createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })`. The previous `ANTHROPIC_API_KEY_RENDER_RIGHT` + `createAnthropic` setup has been replaced — do not reintroduce it.
+The app uses two provider paths:
+
+- **`ANTHROPIC_API_KEY`** — used by `createAnthropic` directly for all `anthropic/*` models. This bypasses the gateway so Vercel free-credit limits don't apply to Claude.
+- **`AI_GATEWAY_API_KEY`** — used by `createGateway` for all other models (Google, Meta, OpenAI). `evals/run.ts` also uses the gateway for its Haiku runs.
 
 ---
 
