@@ -11,12 +11,23 @@ const gateway = createGateway({
   apiKey: process.env.AI_GATEWAY_API_KEY,
 });
 
+const ALLOWED_MODELS = new Set([
+  'anthropic/claude-sonnet-4.6',
+  'anthropic/claude-haiku-4.5',
+  'google/gemini-2.5-flash',
+  'google/gemini-2.5-pro',
+  'meta/llama-4-maverick',
+]);
+
+const DEFAULT_MODEL = 'anthropic/claude-sonnet-4.6';
+
 export async function POST(req: Request) {
-  const { messages } = await req.json();
+  const { messages, model: requestedModel } = await req.json();
+  const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : DEFAULT_MODEL;
   const modelMessages = await convertToModelMessages(messages);
 
   const result = streamText({
-    model: gateway('anthropic/claude-sonnet-4.6'),
+    model: gateway(model),
     system: {
       role: 'system',
       content: SYSTEM_PROMPT,
