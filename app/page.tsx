@@ -77,7 +77,11 @@ export default function Home() {
       const res = await fetch('/api/reports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analyses, repoUrl }),
+        body: JSON.stringify({
+          analyses,
+          repoUrl,
+          modelLabel: MODELS.find(m => m.id === selectedModelRef.current)?.label ?? 'Claude Sonnet 4.6',
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);

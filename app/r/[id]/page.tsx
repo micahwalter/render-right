@@ -11,7 +11,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   const res = await fetch(blobs[0].url, {
     headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
   });
-  const { analyses, repoUrl }: { analyses: RouteAnalysis[]; repoUrl: string } = await res.json();
+  const { analyses, repoUrl, modelLabel = 'Claude Sonnet 4.6' }: { analyses: RouteAnalysis[]; repoUrl: string; modelLabel?: string } = await res.json();
 
   const highPriority = analyses.filter(a => a.priority === 'high' && !a.isAlreadyOptimal);
 
@@ -66,7 +66,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <span className="text-xs text-white/20">Built with AI SDK</span>
           <span className="text-xs text-white/20">
-            Next.js 16 · Claude Sonnet 4.6 · Multi-step agent
+            Next.js 16 · {modelLabel} · Multi-step agent
           </span>
         </div>
       </footer>
