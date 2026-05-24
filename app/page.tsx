@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import RouteCard, { type RouteAnalysis } from '@/components/RouteCard';
+import { buildSummary } from '@/lib/summary';
 
 const EXAMPLES = [
   { url: 'https://github.com/nextjs/saas-starter', label: 'saas-starter' },
@@ -57,8 +58,6 @@ export default function Home() {
     .map(p => (p as { type: 'text'; text: string }).text)
     .join('') ?? '';
 
-  // Only show text as status while still loading; once complete it becomes the summary
-  const statusText = isLoading ? assistantText : '';
 
   const handleAnalyze = (url = repoUrl) => {
     const trimmed = url.trim();
@@ -229,7 +228,7 @@ export default function Home() {
                   ref={logRef}
                   className="max-h-40 overflow-y-auto px-3 py-2 text-xs text-white/40 font-mono leading-relaxed whitespace-pre-wrap"
                 >
-                  {statusText || 'Fetching repository…'}
+                  {assistantText || 'Fetching repository…'}
                 </div>
               </div>
             )}
@@ -253,6 +252,13 @@ export default function Home() {
                   Rendering strategies look well-optimized across these routes.
                 </span>
               </div>
+            )}
+
+            {/* Computed summary paragraph — shown when complete */}
+            {isComplete && (
+              <p className="text-sm text-white/50 leading-relaxed mb-6">
+                {buildSummary(analyses)}
+              </p>
             )}
 
             {/* Route cards — appear as the agent reports each one */}
