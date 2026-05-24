@@ -1,5 +1,5 @@
 import { streamText, convertToModelMessages, tool, stepCountIs } from 'ai';
-import { createGateway, type GatewayProviderOptions } from '@ai-sdk/gateway';
+import { createGateway } from '@ai-sdk/gateway';
 import { z } from 'zod';
 import { listRoutes, readFile } from '@/lib/github';
 import { SYSTEM_PROMPT } from '@/lib/prompts';
@@ -29,14 +29,8 @@ export async function POST(req: Request) {
   const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : DEFAULT_MODEL;
   const modelMessages = await convertToModelMessages(messages);
 
-  const gatewayProviderOptions: GatewayProviderOptions | undefined =
-    model.startsWith('anthropic/') && process.env.ANTHROPIC_API_KEY
-      ? { byok: { anthropic: [{ apiKey: process.env.ANTHROPIC_API_KEY }] } }
-      : undefined;
-
   const result = streamText({
     model: gateway(model),
-    providerOptions: gatewayProviderOptions ? { gateway: gatewayProviderOptions } : undefined,
     system: {
       role: 'system',
       content: SYSTEM_PROMPT,
