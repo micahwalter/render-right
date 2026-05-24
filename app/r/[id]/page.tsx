@@ -1,6 +1,7 @@
 import { list } from '@vercel/blob';
 import { notFound } from 'next/navigation';
 import RouteCard, { type RouteAnalysis } from '@/components/RouteCard';
+import { buildSummary } from '@/lib/summary';
 
 export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -49,6 +50,10 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
             </span>
           </div>
         )}
+
+        <p className="text-sm text-white/50 leading-relaxed mb-6">
+          {buildSummary(analyses)}
+        </p>
 
         <div className="space-y-3">
           {analyses.map((a, i) => (
