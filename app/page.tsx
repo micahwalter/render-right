@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import RouteCard, { type RouteAnalysis } from '@/components/RouteCard';
@@ -11,15 +11,33 @@ const EXAMPLES = [
   { url: 'https://github.com/timlrx/tailwind-nextjs-starter-blog', label: 'tailwind-blog' },
 ];
 
+const MODELS = [
+  { id: 'anthropic/claude-sonnet-4.6', label: 'Claude Sonnet 4.6' },
+  { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+  { id: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+  { id: 'meta/llama-4-maverick', label: 'Llama 4 Maverick' },
+];
+
+const DEFAULT_MODEL = 'anthropic/claude-sonnet-4.6';
+
 export default function Home() {
   const [repoUrl, setRepoUrl] = useState('');
   const [hasStarted, setHasStarted] = useState(false);
   const [shareStatus, setShareStatus] = useState<'idle' | 'loading' | 'copied' | 'error'>('idle');
   const [shareError, setShareError] = useState('');
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
+  const selectedModelRef = useRef(selectedModel);
 
-  const { messages, sendMessage, status, error } = useChat({
-    transport: new DefaultChatTransport({ api: '/api/analyze' }),
-  });
+  const transport = useMemo(() => new DefaultChatTransport({
+    api: '/api/analyze',
+    fetch: async (url, init) => {
+      const body = init?.body ? JSON.parse(init.body as string) : {};
+      body.model = selectedModelRef.current;
+      return globalThis.fetch(url, { ...init, body: JSON.stringify(body) });
+    },
+  }), []);
+
+  const { messages, sendMessage, status, error } = useChat({ transport });
 
   const isLoading = status === 'submitted' || status === 'streaming';
 
@@ -150,6 +168,22 @@ export default function Home() {
               disabled={isLoading}
               className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm placeholder:text-white/25 focus:outline-none focus:border-white/25 disabled:opacity-50 transition-colors"
             />
+            <select
+              value={selectedModel}
+              onChange={e => {
+                setSelectedModel(e.target.value);
+                selectedModelRef.current = e.target.value;
+              }}
+              disabled={isLoading}
+              className="bg-white/5 border border-white/10 rounded-lg px-3 py-3 text-sm text-white/60 focus:outline-none focus:border-white/25 disabled:opacity-50 transition-colors cursor-pointer appearance-none"
+              aria-label="Model"
+            >
+              {MODELS.map(m => (
+                <option key={m.id} value={m.id} className="bg-zinc-900 text-white">
+                  {m.label}
+                </option>
+              ))}
+            </select>
             <button
               onClick={() => handleAnalyze()}
               disabled={isLoading || !repoUrl.trim()}
@@ -242,7 +276,9 @@ export default function Home() {
       <footer className="border-t border-white/5 px-6 py-4 shrink-0">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <span className="text-xs text-white/20">Built with AI SDK</span>
-          <span className="text-xs text-white/20">Next.js 16 · Claude Sonnet 4.6 · Multi-step agent</span>
+          <span className="text-xs text-white/20">
+            Next.js 16 · {MODELS.find(m => m.id === selectedModel)?.label ?? 'Claude Sonnet 4.6'} · Multi-step agent
+          </span>
         </div>
       </footer>
     </div>
