@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import RouteCard, { type RouteAnalysis } from '@/components/RouteCard';
 import { buildSummary } from '@/lib/summary';
 
+export const revalidate = false; // reports are immutable — cache forever at the CDN edge
+
 export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { blobs } = await list({ prefix: `reports/${id}` });
