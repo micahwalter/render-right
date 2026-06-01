@@ -1,6 +1,6 @@
 {
   "description": "Lightweight evaluation rubric for render-right route classification accuracy",
-  "version": "1.0",
+  "version": "1.0.1",
   "scoring": "1 point per correct recommendedStrategy. Partial credit: PPR vs ISR edge cases expected to vary.",
   "cases": [
     {
